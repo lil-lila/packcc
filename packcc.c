@@ -66,11 +66,6 @@ static size_t strnlen(const char *str, size_t maxlen) {
 #define ARRAY_INIT_SIZE 2
 #endif
 
-typedef enum bool_tag {
-    FALSE = 0,
-    TRUE
-} bool_t;
-
 typedef struct char_array_tag {
     char *buf;
     int max;
@@ -147,7 +142,7 @@ typedef struct node_quantity_tag {
 } node_quantity_t;
 
 typedef struct node_predicate_tag {
-    bool_t neg;
+    bool neg;
     node_t *expr;
 } node_predicate_t;
 
@@ -216,7 +211,7 @@ typedef struct context_tag {
     char *vtype;
     char *atype;
     char *prefix;
-    bool_t debug;
+    bool debug;
     int errnum;
     int linenum;
     int linepos;
@@ -308,7 +303,7 @@ static char *strndup_e(const char *str, size_t len) {
     return s;
 }
 
-static bool_t is_filled_string(const char *str) {
+static bool is_filled_string(const char *str) {
     size_t i;
     for (i = 0; str[i]; i++) {
         if (
@@ -318,42 +313,42 @@ static bool_t is_filled_string(const char *str) {
             str[i] != '\t' &&
             str[i] != '\n' &&
             str[i] != '\r'
-        ) return TRUE;
+        ) return true;
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t is_identifier_string(const char *str) {
+static bool is_identifier_string(const char *str) {
     size_t i;
     if (!(
         (str[0] >= 'a' && str[0] <= 'z') ||
         (str[0] >= 'A' && str[0] <= 'Z') ||
          str[0] == '_'
-    )) return FALSE;
+    )) return false;
     for (i = 1; str[i]; i++) {
         if (!(
             (str[i] >= 'a' && str[i] <= 'z') ||
             (str[i] >= 'A' && str[i] <= 'Z') ||
             (str[i] >= '0' && str[i] <= '9') ||
              str[i] == '_'
-        )) return FALSE;
+        )) return false;
     }
-    return TRUE;
+    return true;
 }
 
-static bool_t is_pointer_type(const char *str) {
+static bool is_pointer_type(const char *str) {
     size_t n = strlen(str);
-    return (n > 0 && str[n - 1] == '*') ? TRUE : FALSE;
+    return (n > 0 && str[n - 1] == '*');
 }
 
-static bool_t unescape_string(char *str) {
-    bool_t b = TRUE;
+static bool unescape_string(char *str) {
+    bool b = true;
     size_t i, j;
     for (j = 0, i = 0; str[i]; i++) {
         if (str[i] == '\\') {
             i++;
             switch (str[i]) {
-            case '\0': str[j++] = '\\'; str[j] = '\0'; return FALSE;
+            case '\0': str[j++] = '\\'; str[j] = '\0'; return false;
             case '0': str[j++] = '\x00'; break;
             case 'a': str[j++] = '\x07'; break;
             case 'b': str[j++] = '\x08'; break;
@@ -364,10 +359,10 @@ static bool_t unescape_string(char *str) {
             case 'v': str[j++] = '\x0b'; break;
             case 'x':
                 if (str[i + 1] == '\0') {
-                    str[j++] = '\\'; str[j++] = 'x'; str[j] = '\0'; return FALSE;
+                    str[j++] = '\\'; str[j++] = 'x'; str[j] = '\0'; return false;
                 }
                 if (str[i + 2] == '\0') {
-                    str[j++] = '\\'; str[j++] = 'x'; str[j++] = str[i + 1]; str[j] = '\0'; return FALSE; 
+                    str[j++] = '\\'; str[j++] = 'x'; str[j++] = str[i + 1]; str[j] = '\0'; return false;
                 }
                 {
                     char c = str[i + 1];
@@ -380,7 +375,7 @@ static bool_t unescape_string(char *str) {
                         (d >= 'A' && d <= 'F') ? d - 'A' + 10 : -1;
                     if (c < 0 || d < 0) {
                         str[j++] = '\\'; str[j++] = 'x'; str[j++] = str[i + 1]; str[j++] = str[i + 2];
-                        b = FALSE;
+                        b = false;
                     }
                     else {
                         str[j++] = (c << 4) | d;
@@ -494,7 +489,7 @@ static void write_code_block(FILE *stream, const char *ptr, size_t len, int inde
         }
     }
     if (i < len) {
-        bool_t s = TRUE;
+        bool s = true;
         size_t k = i + 1;
         int l = 0, m = -1;
         for (i = k; i < len; i++) {
@@ -508,16 +503,16 @@ static void write_code_block(FILE *stream, const char *ptr, size_t len, int inde
                 if (s) l = (l + 8) & ~7;
                 break;
             case '\n':
-                s = TRUE;
+                s = true;
                 l = 0;
                 break;
             case '\r':
                 if (i + 1 < len && ptr[i + 1] == '\n') i++;
-                s = TRUE;
+                s = true;
                 l = 0;
                 break;
             default:
-                s = FALSE;
+                s = false;
                 m = (m >= 0 && m < l) ? m : l;
             }
         }
@@ -535,7 +530,7 @@ static void write_code_block(FILE *stream, const char *ptr, size_t len, int inde
             write_characters(stream, ' ', indent);
             write_text(stream, ptr + i, k - i);
         }
-        s = TRUE;
+        s = true;
         l = 0;
         for (i = k; i < len; i++) {
             switch (ptr[i]) {
@@ -549,19 +544,19 @@ static void write_code_block(FILE *stream, const char *ptr, size_t len, int inde
                 break;
             case '\n':
                 fputc('\n', stream);
-                s = TRUE;
+                s = true;
                 l = 0;
                 break;
             case '\r':
                 if (i + 1 < len && ptr[i + 1] == '\n') i++;
                 fputc('\n', stream);
-                s = TRUE;
+                s = true;
                 l = 0;
                 break;
             default:
                 if (s) {
                     write_characters(stream, ' ', l - m + indent);
-                    s = FALSE;
+                    s = false;
                 }
                 fputc(ptr[i], stream);
             }
@@ -709,7 +704,7 @@ static void node_const_array__term(node_const_array_t *array) {
     free((node_t **)array->buf);
 }
 
-static context_t *create_context(const char *iname, const char *oname, bool_t debug) {
+static context_t *create_context(const char *iname, const char *oname, bool debug) {
     context_t *ctx = (context_t *)malloc_e(sizeof(context_t));
     ctx->iname = strdup_e((iname && iname[0]) ? iname : "-");
     ctx->sname = (oname && oname[0]) ? add_fileext(oname, "c") : replace_fileext(ctx->iname, "c");
@@ -767,7 +762,7 @@ static node_t *create_node(node_type_t type) {
         node->data.quantity.expr = NULL;
         break;
     case NODE_PREDICATE:
-        node->data.predicate.neg = FALSE;
+        node->data.predicate.neg = false;
         node->data.predicate.expr = NULL;
         break;
     case NODE_SEQUENCE:
@@ -974,7 +969,7 @@ static void link_references(context_t *ctx, node_t *node) {
 
 static void verify_variables(context_t *ctx, node_t *node, node_const_array_t *vars) {
     node_const_array_t a;
-    bool_t b = (vars == NULL) ? TRUE : FALSE;
+    bool b = (vars == NULL);
     if (node == NULL) return;
     if (b) {
         node_const_array__init(&a, ARRAY_INIT_SIZE);
@@ -1054,7 +1049,7 @@ static void verify_variables(context_t *ctx, node_t *node, node_const_array_t *v
 
 static void verify_captures(context_t *ctx, node_t *node, node_const_array_t *capts) {
     node_const_array_t a;
-    bool_t b = (capts == NULL) ? TRUE : FALSE;
+    bool b = (capts == NULL);
     if (node == NULL) return;
     if (b) {
         node_const_array__init(&a, ARRAY_INIT_SIZE);
@@ -1245,18 +1240,18 @@ static void commit_buffer(context_t *ctx) {
     ctx->bufpos = 0;
 }
 
-static bool_t match_eof(context_t *ctx) {
-    return (refill_buffer(ctx, 1) < 1) ? TRUE : FALSE;
+static bool match_eof(context_t *ctx) {
+    return refill_buffer(ctx, 1) < 1;
 }
 
-static bool_t match_eol(context_t *ctx) {
+static bool match_eol(context_t *ctx) {
     if (refill_buffer(ctx, 1) >= 1) {
         switch (ctx->buffer.buf[ctx->bufpos]) {
         case '\n':
             ctx->bufpos++;
             ctx->linenum++;
             ctx->linepos = ctx->bufpos;
-            return TRUE;
+            return true;
         case '\r':
             ctx->bufpos++;
             if (refill_buffer(ctx, 1) >= 1) {
@@ -1264,79 +1259,79 @@ static bool_t match_eol(context_t *ctx) {
             }
             ctx->linenum++;
             ctx->linepos = ctx->bufpos;
-            return TRUE;
+            return true;
         }
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t match_character(context_t *ctx, char ch) {
+static bool match_character(context_t *ctx, char ch) {
     if (refill_buffer(ctx, 1) >= 1) {
         if (ctx->buffer.buf[ctx->bufpos] == ch) {
             ctx->bufpos++;
-            return TRUE;
+            return true;
         }
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t match_character_range(context_t *ctx, char min, char max) {
+static bool match_character_range(context_t *ctx, char min, char max) {
     if (refill_buffer(ctx, 1) >= 1) {
         char c = ctx->buffer.buf[ctx->bufpos];
         if (c >= min && c <= max) { 
             ctx->bufpos++;
-            return TRUE;
+            return true;
         }
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t match_character_set(context_t *ctx, const char *chs) {
+static bool match_character_set(context_t *ctx, const char *chs) {
     if (refill_buffer(ctx, 1) >= 1) {
         char c = ctx->buffer.buf[ctx->bufpos];
         int i;
         for (i = 0; chs[i]; i++) {
             if (c == chs[i]) {
                 ctx->bufpos++;
-                return TRUE;
+                return true;
             }
         }
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t match_character_any(context_t *ctx) {
+static bool match_character_any(context_t *ctx) {
     if (refill_buffer(ctx, 1) >= 1) {
         ctx->bufpos++;
-        return TRUE;
+        return true;
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t match_string(context_t *ctx, const char *str) {
+static bool match_string(context_t *ctx, const char *str) {
     int n = strlen(str);
     if (refill_buffer(ctx, n) >= n) {
         if (strncmp(ctx->buffer.buf + ctx->bufpos, str, n) == 0) {
             ctx->bufpos += n;
-            return TRUE;
+            return true;
         }
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t match_blank(context_t *ctx) {
+static bool match_blank(context_t *ctx) {
     return match_character_set(ctx, " \t\v\f");
 }
 
-static bool_t match_section_line_(context_t *ctx, const char *head) {
+static bool match_section_line_(context_t *ctx, const char *head) {
     if (match_string(ctx, head)) {
         while (!match_eol(ctx) && !match_eof(ctx)) match_character_any(ctx);
-        return TRUE;
+        return true;
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t match_section_line_continuable_(context_t *ctx, const char *head) {
+static bool match_section_line_continuable_(context_t *ctx, const char *head) {
     if (match_string(ctx, head)) {
         while (!match_eof(ctx)) {
             int p = ctx->bufpos;
@@ -1347,12 +1342,12 @@ static bool_t match_section_line_continuable_(context_t *ctx, const char *head) 
                 match_character_any(ctx);
             }
         }
-        return TRUE;
+        return true;
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t match_section_block_(context_t *ctx, const char *left, const char *right, const char *name) {
+static bool match_section_block_(context_t *ctx, const char *left, const char *right, const char *name) {
     int l = ctx->linenum;
     int m = ctx->bufpos - ctx->linepos;
     if (match_string(ctx, left)) {
@@ -1364,12 +1359,12 @@ static bool_t match_section_block_(context_t *ctx, const char *left, const char 
             }
             if (!match_eol(ctx)) match_character_any(ctx);
         }
-        return TRUE;
+        return true;
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t match_quotation_(context_t *ctx, const char *left, const char *right, const char *name) {
+static bool match_quotation_(context_t *ctx, const char *left, const char *right, const char *name) {
     int l = ctx->linenum;
     int m = ctx->bufpos - ctx->linepos;
     if (match_string(ctx, left)) {
@@ -1391,54 +1386,54 @@ static bool_t match_quotation_(context_t *ctx, const char *left, const char *rig
                 match_character_any(ctx);
             }
         }
-        return TRUE;
+        return true;
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t match_directive_c(context_t *ctx) {
+static bool match_directive_c(context_t *ctx) {
     return match_section_line_continuable_(ctx, "#");
 }
 
-static bool_t match_comment(context_t *ctx) {
+static bool match_comment(context_t *ctx) {
     return match_section_line_(ctx, "#");
 }
 
-static bool_t match_comment_c(context_t *ctx) {
+static bool match_comment_c(context_t *ctx) {
     return match_section_block_(ctx, "/*", "*/", "C comment");
 }
 
-static bool_t match_comment_cxx(context_t *ctx) {
+static bool match_comment_cxx(context_t *ctx) {
     return match_section_line_(ctx, "//");
 }
 
-static bool_t match_quotation_single(context_t *ctx) {
+static bool match_quotation_single(context_t *ctx) {
     return match_quotation_(ctx, "\'", "\'", "single quotation");
 }
 
-static bool_t match_quotation_double(context_t *ctx) {
+static bool match_quotation_double(context_t *ctx) {
     return match_quotation_(ctx, "\"", "\"", "double quotation");
 }
 
-static bool_t match_character_class(context_t *ctx) {
+static bool match_character_class(context_t *ctx) {
     return match_quotation_(ctx, "[", "]", "character class");
 }
 
-static bool_t match_spaces(context_t *ctx) {
+static bool match_spaces(context_t *ctx) {
     int n = 0;
     while (match_blank(ctx) || match_eol(ctx) || match_comment(ctx)) n++;
-    return (n > 0) ? TRUE : FALSE;
+    return (n > 0);
 }
 
-static bool_t match_number(context_t *ctx) {
+static bool match_number(context_t *ctx) {
     if (match_character_range(ctx, '0', '9')) {
         while (match_character_range(ctx, '0', '9'));
-        return TRUE;
+        return true;
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t match_identifier(context_t *ctx) {
+static bool match_identifier(context_t *ctx) {
     if (
         match_character_range(ctx, 'a', 'z') ||
         match_character_range(ctx, 'A', 'Z') ||
@@ -1450,12 +1445,12 @@ static bool_t match_identifier(context_t *ctx) {
             match_character_range(ctx, '0', '9') ||
             match_character(ctx, '_')
         );
-        return TRUE;
+        return true;
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t match_code_block(context_t *ctx) {
+static bool match_code_block(context_t *ctx) {
     int l = ctx->linenum;
     int m = ctx->bufpos - ctx->linepos;
     if (match_character(ctx, '{')) {
@@ -1491,12 +1486,12 @@ static bool_t match_code_block(context_t *ctx) {
                 }
             }
         }
-        return TRUE;
+        return true;
     }
-    return FALSE;
+    return false;
 }
 
-static bool_t match_footer_start(context_t *ctx) {
+static bool match_footer_start(context_t *ctx) {
     return match_string(ctx, "%%");
 }
 
@@ -1672,12 +1667,12 @@ static node_t *parse_term(context_t *ctx, node_t *rule) {
     switch (t) {
     case '&':
         n_r = create_node(NODE_PREDICATE);
-        n_r->data.predicate.neg = FALSE;
+        n_r->data.predicate.neg = false;
         n_r->data.predicate.expr = n_q;
         break;
     case '!':
         n_r = create_node(NODE_PREDICATE);
-        n_r->data.predicate.neg = TRUE;
+        n_r->data.predicate.neg = true;
         n_r->data.predicate.expr = n_q;
         break;
     default:
@@ -1824,10 +1819,10 @@ static void dump_options(context_t *ctx) {
     fprintf(stdout, "prefix:'%s'\n", get_prefix(ctx));
 }
 
-static bool_t parse_directive_include_(context_t *ctx, const char *name, FILE *output1, FILE *output2) {
+static bool parse_directive_include_(context_t *ctx, const char *name, FILE *output1, FILE *output2) {
     int l = ctx->linenum;
     int m = ctx->bufpos - ctx->linepos;
-    if (!match_string(ctx, name)) return FALSE;
+    if (!match_string(ctx, name)) return false;
     match_spaces(ctx);
     {
         int p = ctx->bufpos;
@@ -1848,13 +1843,13 @@ static bool_t parse_directive_include_(context_t *ctx, const char *name, FILE *o
             ctx->errnum++;
         }
     }
-    return TRUE;
+    return true;
 }
 
-static bool_t parse_directive_string_(context_t *ctx, const char *name, char **output, string_flag_t mode) {
+static bool parse_directive_string_(context_t *ctx, const char *name, char **output, string_flag_t mode) {
     int l = ctx->linenum;
     int m = ctx->bufpos - ctx->linepos;
-    if (!match_string(ctx, name)) return FALSE;
+    if (!match_string(ctx, name)) return false;
     match_spaces(ctx);
     {
         char *s = NULL;
@@ -1876,7 +1871,7 @@ static bool_t parse_directive_string_(context_t *ctx, const char *name, char **o
         }
         if (s != NULL) {
             string_flag_t f = STRING_FLAG__NONE;
-            bool_t b = TRUE;
+            bool b = true;
             remove_heading_blank(s);
             remove_trailing_blank(s);
             assert((mode & ~7) == 0);
@@ -1900,7 +1895,7 @@ static bool_t parse_directive_string_(context_t *ctx, const char *name, char **o
             if (*output != NULL) {
                 print_error("%s:%d:%d: Multiple %s definition\n", ctx->iname, l + 1, m + 1, name);
                 ctx->errnum++;
-                b = FALSE;
+                b = false;
             }
             if (f == STRING_FLAG__NONE && b) {
                 *output = s;
@@ -1910,10 +1905,10 @@ static bool_t parse_directive_string_(context_t *ctx, const char *name, char **o
             }
         }
     }
-    return TRUE;
+    return true;
 }
 
-static bool_t parse(context_t *ctx) {
+static bool parse(context_t *ctx) {
     fprintf(ctx->sfile, "/* A packrat parser generated by PackCC %s */\n\n", VERSION);
     fprintf(ctx->hfile, "/* A packrat parser generated by PackCC %s */\n\n", VERSION);
     {
@@ -1956,7 +1951,7 @@ static bool_t parse(context_t *ctx) {
         );
     }
     {
-        bool_t b = TRUE;
+        bool b = true;
         match_spaces(ctx);
         for (;;) {
             int p, l, m;
@@ -1972,14 +1967,14 @@ static bool_t parse(context_t *ctx) {
                 parse_directive_string_(ctx, "%auxil", &ctx->atype, STRING_FLAG__NOTEMPTY | STRING_FLAG__NOTVOID) ||
                 parse_directive_string_(ctx, "%prefix", &ctx->prefix, STRING_FLAG__NOTEMPTY | STRING_FLAG__IDENTIFIER)
             ) {
-                b = TRUE;
+                b = true;
             }
             else if (match_character(ctx, '%')) {
                 print_error("%s:%d:%d: Invalid directive\n", ctx->iname, l + 1, m + 1);
                 ctx->errnum++;
                 match_identifier(ctx);
                 match_spaces(ctx);
-                b = TRUE;
+                b = true;
             }
             else {
                 node_t *n_r = parse_rule(ctx);
@@ -1987,7 +1982,7 @@ static bool_t parse(context_t *ctx) {
                     if (b) {
                         print_error("%s:%d:%d: Illegal rule syntax\n", ctx->iname, l + 1, m + 1);
                         ctx->errnum++;
-                        b = FALSE;
+                        b = false;
                     }
                     ctx->linenum = l;
                     ctx->linepos = p - m;
@@ -1995,7 +1990,7 @@ static bool_t parse(context_t *ctx) {
                     continue;
                 }
                 node_array__add(&ctx->rules, n_r);
-                b = TRUE;
+                b = true;
             }
             commit_buffer(ctx);
         }
@@ -2034,10 +2029,10 @@ static bool_t parse(context_t *ctx) {
         }
         dump_options(ctx);
     }
-    return (ctx->errnum == 0) ? TRUE : FALSE;
+    return (ctx->errnum == 0);
 }
 
-static code_reach_t generate_matching_string_code(generate_t *gen, const char *value, int onfail, int indent, bool_t bare) {
+static code_reach_t generate_matching_string_code(generate_t *gen, const char *value, int onfail, int indent, bool bare) {
     size_t n = (value != NULL) ? strlen(value) : 0;
     if (n > 0) {
         char s[5];
@@ -2091,15 +2086,15 @@ static code_reach_t generate_matching_string_code(generate_t *gen, const char *v
     }
 }
 
-static code_reach_t generate_matching_charclass_code(generate_t *gen, const char *value, int onfail, int indent, bool_t bare) {
+static code_reach_t generate_matching_charclass_code(generate_t *gen, const char *value, int onfail, int indent, bool bare) {
     if (value != NULL) {
         size_t n = strlen(value);
         if (n > 0) {
             char s[5], t[5];
             if (n > 1) {
-                bool_t a = (value[0] == '^') ? TRUE : FALSE;
+                bool a = (value[0] == '^');
                 size_t i = a ? 1 : 0;
-                if (i + 1 == n) { /* fulfilled only if a == TRUE */
+                if (i + 1 == n) { /* fulfilled only if a == true */
                     write_characters(gen->stream, ' ', indent);
                     fputs("if (\n", gen->stream);
                     write_characters(gen->stream, ' ', indent + 4);
@@ -2188,9 +2183,9 @@ static code_reach_t generate_matching_charclass_code(generate_t *gen, const char
     }
 }
 
-static code_reach_t generate_code(generate_t *gen, const node_t *node, int onfail, int indent, bool_t bare);
+static code_reach_t generate_code(generate_t *gen, const node_t *node, int onfail, int indent, bool bare);
 
-static code_reach_t generate_quantifying_code(generate_t *gen, const node_t *expr, int min, int max, int onfail, int indent, bool_t bare) {
+static code_reach_t generate_quantifying_code(generate_t *gen, const node_t *expr, int min, int max, int onfail, int indent, bool bare) {
     if (max > 1 || max < 0) {
         code_reach_t r;
         if (!bare) {
@@ -2211,7 +2206,7 @@ static code_reach_t generate_quantifying_code(generate_t *gen, const node_t *exp
             fprintf(gen->stream, "for (i = 0; i < %d; i++) {\n", max);
         {
             int l = ++gen->label;
-            r = generate_code(gen, expr, l, indent + 4, TRUE);
+            r = generate_code(gen, expr, l, indent + 4, true);
             write_characters(gen->stream, ' ', indent);
             fputs("}\n", gen->stream);
             if (r != CODE_REACH__ALWAYS_SUCCEED) {
@@ -2258,7 +2253,7 @@ static code_reach_t generate_quantifying_code(generate_t *gen, const node_t *exp
     }
 }
 
-static code_reach_t generate_predicating_code(generate_t *gen, const node_t *expr, bool_t neg, int onfail, int indent, bool_t bare) {
+static code_reach_t generate_predicating_code(generate_t *gen, const node_t *expr, bool neg, int onfail, int indent, bool bare) {
     code_reach_t r;
     if (!bare) {
         write_characters(gen->stream, ' ', indent);
@@ -2269,7 +2264,7 @@ static code_reach_t generate_predicating_code(generate_t *gen, const node_t *exp
     fputs("int p = ctx->pos;\n", gen->stream);
     if (neg) {
         int l = ++gen->label;
-        r = generate_code(gen, expr, l, indent, FALSE);
+        r = generate_code(gen, expr, l, indent, false);
         if (r != CODE_REACH__ALWAYS_FAIL) {
             write_characters(gen->stream, ' ', indent);
             fputs("ctx->pos = p;\n", gen->stream);
@@ -2291,7 +2286,7 @@ static code_reach_t generate_predicating_code(generate_t *gen, const node_t *exp
     else {
         int l = ++gen->label;
         int m = ++gen->label;
-        r = generate_code(gen, expr, l, indent, FALSE);
+        r = generate_code(gen, expr, l, indent, false);
         if (r != CODE_REACH__ALWAYS_FAIL) {
             write_characters(gen->stream, ' ', indent);
             fputs("ctx->pos = p;\n", gen->stream);
@@ -2321,11 +2316,11 @@ static code_reach_t generate_predicating_code(generate_t *gen, const node_t *exp
     return r;
 }
 
-static code_reach_t generate_sequential_code(generate_t *gen, const node_array_t *nodes, int onfail, int indent, bool_t bare) {
-    bool_t b = FALSE;
+static code_reach_t generate_sequential_code(generate_t *gen, const node_array_t *nodes, int onfail, int indent, bool bare) {
+    bool b = false;
     int i;
     for (i = 0; i < nodes->len; i++) {
-        switch (generate_code(gen, nodes->buf[i], onfail, indent, FALSE)) {
+        switch (generate_code(gen, nodes->buf[i], onfail, indent, false)) {
         case CODE_REACH__ALWAYS_FAIL:
             if (i < nodes->len - 1) {
                 write_characters(gen->stream, ' ', indent);
@@ -2335,14 +2330,14 @@ static code_reach_t generate_sequential_code(generate_t *gen, const node_array_t
         case CODE_REACH__ALWAYS_SUCCEED:
             break;
         default:
-            b = TRUE;
+            b = true;
         }
     }
     return b ? CODE_REACH__BOTH : CODE_REACH__ALWAYS_SUCCEED;
 }
 
-static code_reach_t generate_alternative_code(generate_t *gen, const node_array_t *nodes, int onfail, int indent, bool_t bare) {
-    bool_t b = FALSE;
+static code_reach_t generate_alternative_code(generate_t *gen, const node_array_t *nodes, int onfail, int indent, bool bare) {
+    bool b = false;
     int i, m = ++gen->label;
     if (!bare) {
         write_characters(gen->stream, ' ', indent);
@@ -2354,9 +2349,9 @@ static code_reach_t generate_alternative_code(generate_t *gen, const node_array_
     write_characters(gen->stream, ' ', indent);
     fputs("int n = chunk->thunks.len;\n", gen->stream);
     for (i = 0; i < nodes->len; i++) {
-        bool_t c = (i < nodes->len - 1) ? TRUE : FALSE;
+        bool c = (i < nodes->len - 1);
         int l = ++gen->label;
-        switch (generate_code(gen, nodes->buf[i], l, indent, FALSE)) {
+        switch (generate_code(gen, nodes->buf[i], l, indent, false)) {
         case CODE_REACH__ALWAYS_SUCCEED:
             if (c) {
                 write_characters(gen->stream, ' ', indent);
@@ -2375,7 +2370,7 @@ static code_reach_t generate_alternative_code(generate_t *gen, const node_array_
         case CODE_REACH__ALWAYS_FAIL:
             break;
         default:
-            b = TRUE;
+            b = true;
             write_characters(gen->stream, ' ', indent);
             fprintf(gen->stream, "goto L%04d;\n", m);
         }
@@ -2402,7 +2397,7 @@ static code_reach_t generate_alternative_code(generate_t *gen, const node_array_
     return b ? CODE_REACH__BOTH : CODE_REACH__ALWAYS_FAIL;
 }
 
-static code_reach_t generate_capturing_code(generate_t *gen, const node_t *expr, int index, int onfail, int indent, bool_t bare) {
+static code_reach_t generate_capturing_code(generate_t *gen, const node_t *expr, int index, int onfail, int indent, bool bare) {
     code_reach_t r;
     if (!bare) {
         write_characters(gen->stream, ' ', indent);
@@ -2411,7 +2406,7 @@ static code_reach_t generate_capturing_code(generate_t *gen, const node_t *expr,
     }
     write_characters(gen->stream, ' ', indent);
     fputs("int p = ctx->pos, q;\n", gen->stream);
-    r = generate_code(gen, expr, onfail, indent, FALSE);
+    r = generate_code(gen, expr, onfail, indent, false);
     write_characters(gen->stream, ' ', indent);
     fputs("q = ctx->pos;\n", gen->stream);
     write_characters(gen->stream, ' ', indent);
@@ -2426,7 +2421,7 @@ static code_reach_t generate_capturing_code(generate_t *gen, const node_t *expr,
     return r;
 }
 
-static code_reach_t generate_expanding_code(generate_t *gen, int index, int onfail, int indent, bool_t bare) {
+static code_reach_t generate_expanding_code(generate_t *gen, int index, int onfail, int indent, bool bare) {
     if (!bare) {
         write_characters(gen->stream, ' ', indent);
         fputs("{\n", gen->stream);
@@ -2463,7 +2458,7 @@ static code_reach_t generate_expanding_code(generate_t *gen, int index, int onfa
 }
 
 code_reach_t generate_thunking_action_code(
-    generate_t *gen, int index, const node_const_array_t *vars, const node_const_array_t *capts, bool_t error, int onfail, int indent, bool_t bare
+    generate_t *gen, int index, const node_const_array_t *vars, const node_const_array_t *capts, bool error, int onfail, int indent, bool bare
 ) {
     assert(gen->rule->type == NODE_RULE);
     if (!bare) {
@@ -2518,7 +2513,7 @@ code_reach_t generate_thunking_action_code(
 }
 
 code_reach_t generate_thunking_error_code(
-    generate_t *gen, const node_t *expr, int index, const node_const_array_t *vars, const node_const_array_t *capts, int onfail, int indent, bool_t bare
+    generate_t *gen, const node_t *expr, int index, const node_const_array_t *vars, const node_const_array_t *capts, int onfail, int indent, bool bare
 ) {
     code_reach_t r;
     int l = ++gen->label;
@@ -2529,12 +2524,12 @@ code_reach_t generate_thunking_error_code(
         fputs("{\n", gen->stream);
         indent += 4;
     }
-    r = generate_code(gen, expr, l, indent, TRUE);
+    r = generate_code(gen, expr, l, indent, true);
     write_characters(gen->stream, ' ', indent);
     fprintf(gen->stream, "goto L%04d;\n", m);
     write_characters(gen->stream, ' ', indent - 4);
     fprintf(gen->stream, "L%04d:;\n", l);
-    generate_thunking_action_code(gen, index, vars, capts, TRUE, l, indent, FALSE);
+    generate_thunking_action_code(gen, index, vars, capts, true, l, indent, false);
     write_characters(gen->stream, ' ', indent);
     fprintf(gen->stream, "goto L%04d;\n", onfail);
     write_characters(gen->stream, ' ', indent - 4);
@@ -2547,7 +2542,7 @@ code_reach_t generate_thunking_error_code(
     return r;
 }
 
-static code_reach_t generate_code(generate_t *gen, const node_t *node, int onfail, int indent, bool_t bare) {
+static code_reach_t generate_code(generate_t *gen, const node_t *node, int onfail, int indent, bool bare) {
     if (node == NULL) {
         print_error("Internal error [%d]\n", __LINE__);
         exit(-1);
@@ -2585,7 +2580,7 @@ static code_reach_t generate_code(generate_t *gen, const node_t *node, int onfai
         return generate_expanding_code(gen, node->data.expand.index, onfail, indent, bare);
     case NODE_ACTION:
         return generate_thunking_action_code(
-            gen, node->data.action.index, &node->data.action.vars, &node->data.action.capts, FALSE, onfail, indent, bare
+            gen, node->data.action.index, &node->data.action.vars, &node->data.action.capts, false, onfail, indent, bare
         );
     case NODE_ERROR:
         return generate_thunking_error_code(
@@ -2597,11 +2592,11 @@ static code_reach_t generate_code(generate_t *gen, const node_t *node, int onfai
     }
 }
 
-static bool_t generate(context_t *ctx) {
+static bool generate(context_t *ctx) {
     const char *vt = get_value_type(ctx);
     const char *at = get_auxil_type(ctx);
-    bool_t vp = is_pointer_type(vt);
-    bool_t ap = is_pointer_type(at);
+    bool vp = is_pointer_type(vt);
+    bool ap = is_pointer_type(at);
     FILE *stream = ctx->sfile;
     {
         fputs(
@@ -2612,11 +2607,6 @@ static bool_t generate(context_t *ctx) {
             "#ifndef PCC_ARRAYSIZE\n"
             "#define PCC_ARRAYSIZE 2\n"
             "#endif /* PCC_ARRAYSIZE */\n"
-            "\n"
-            "typedef enum pcc_bool_tag {\n"
-            "    PCC_FALSE = 0,\n"
-            "    PCC_TRUE\n"
-            "} pcc_bool_t;\n"
             "\n"
             "typedef struct pcc_char_array_tag {\n"
             "    char *buf;\n"
@@ -3081,21 +3071,21 @@ static bool_t generate(context_t *ctx) {
             "    return -1;\n"
             "}\n"
             "\n"
-            "static pcc_bool_t pcc_rule_set__add(pcc_auxil_t auxil, pcc_rule_set_t *set, pcc_rule_t rule) {\n"
+            "static pcc_bool pcc_rule_set__add(pcc_auxil_t auxil, pcc_rule_set_t *set, pcc_rule_t rule) {\n"
             "    int i = pcc_rule_set__index(auxil, set, rule);\n"
-            "    if (i >= 0) return PCC_FALSE;\n"
+            "    if (i >= 0) return false;\n"
             "    if (set->max <= 0) set->max = 1;\n"
             "    while (set->max <= set->len) set->max <<= 1;\n"
             "    set->buf = (pcc_rule_t *)PCC_REALLOC(auxil, set->buf, set->max * sizeof(pcc_rule_t));\n"
             "    set->buf[set->len++] = rule;\n"
-            "    return PCC_TRUE;\n"
+            "    return true;\n"
             "}\n"
             "\n"
-            "static pcc_bool_t pcc_rule_set__remove(pcc_auxil_t auxil, pcc_rule_set_t *set, pcc_rule_t rule) {\n"
+            "static pcc_bool pcc_rule_set__remove(pcc_auxil_t auxil, pcc_rule_set_t *set, pcc_rule_t rule) {\n"
             "    int i = pcc_rule_set__index(auxil, set, rule);\n"
-            "    if (i < 0) return PCC_FALSE;\n"
+            "    if (i < 0) return false;\n"
             "    memmove(set->buf + i, set->buf + (i + 1), (set->len - (i + 1)) * sizeof(pcc_rule_t));\n"
-            "    return PCC_TRUE;\n"
+            "    return true;\n"
             "}\n"
             "\n"
             "static void pcc_rule_set__clear(pcc_auxil_t auxil, pcc_rule_set_t *set) {\n"
@@ -3428,23 +3418,23 @@ static bool_t generate(context_t *ctx) {
         );
         fprintf(
             stream,
-            "static pcc_bool_t pcc_apply_rule(%s_context_t *ctx, pcc_rule_t rule, pcc_thunk_array_t *thunks, pcc_value_t *value) {\n",
+            "static pcc_bool pcc_apply_rule(%s_context_t *ctx, pcc_rule_t rule, pcc_thunk_array_t *thunks, pcc_value_t *value) {\n",
             get_prefix(ctx)
         );
         fputs(
             "    static pcc_value_t null;\n"
             "    pcc_thunk_chunk_t *c = NULL;\n"
             "    int p = ctx->pos;\n"
-            "    pcc_bool_t b = PCC_TRUE;\n"
+            "    pcc_bool b = true;\n"
             "    pcc_lr_answer_t *a = pcc_lr_table__get_answer(ctx->auxil, &ctx->lrtable, p, rule);\n"
             "    pcc_lr_head_t *h = pcc_lr_table__get_head(ctx->auxil, &ctx->lrtable, p);\n"
             "    if (h != NULL) {\n"
             "        if (a == NULL && rule != h->rule && pcc_rule_set__index(ctx->auxil, &h->invol, rule) < 0) {\n"
-            "            b = PCC_FALSE;\n"
+            "            b = false;\n"
             "            c = NULL;\n"
             "        }\n"
             "        else if (pcc_rule_set__remove(ctx->auxil, &h->eval, rule)) {\n"
-            "            b = PCC_FALSE;\n"
+            "            b = false;\n"
             "            c = rule(ctx);\n"
             "            a = pcc_lr_answer__create(ctx->auxil, PCC_LR_ANSWER_CHUNK, ctx->pos);\n"
             "            a->data.chunk = c;\n"
@@ -3522,11 +3512,11 @@ static bool_t generate(context_t *ctx) {
             "            }\n"
             "        }\n"
             "    }\n"
-            "    if (c == NULL) return PCC_FALSE;\n"
+            "    if (c == NULL) return false;\n"
             "    if (value == NULL) value = &null;\n"
             "    memset(value, 0, sizeof(pcc_value_t)); /* in case */\n"
             "    pcc_thunk_array__add(ctx->auxil, thunks, pcc_thunk__create_node(ctx->auxil, &c->thunks, value));\n"
-            "    return PCC_TRUE;\n"
+            "    return true;\n"
             "}\n"
             "\n",
             stream
@@ -3711,7 +3701,7 @@ static bool_t generate(context_t *ctx) {
                     "    pcc_capture_table__resize(ctx->auxil, &chunk->capts, %d);\n",
                     ctx->rules.buf[i]->data.rule.capts.len
                 );
-                r = generate_code(&g, ctx->rules.buf[i]->data.rule.expr, 0, 4, FALSE);
+                r = generate_code(&g, ctx->rules.buf[i]->data.rule.expr, 0, 4, false);
                 fputs(
                     "    return chunk;\n",
                     stream
@@ -3842,7 +3832,7 @@ static bool_t generate(context_t *ctx) {
             commit_buffer(ctx);
         }
     }
-    return (ctx->errnum == 0) ? TRUE : FALSE;
+    return (ctx->errnum == 0);
 }
 
 static void print_version(FILE *output) {
@@ -3863,7 +3853,7 @@ static void print_usage(FILE *output) {
 int main(int argc, char **argv) {
     const char *iname = NULL;
     const char *oname = NULL;
-    bool_t debug = FALSE;
+    bool debug = false;
 #ifdef _MSC_VER
 #ifdef _DEBUG
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
@@ -3875,9 +3865,9 @@ int main(int argc, char **argv) {
     {
         const char *fname = NULL;
         const char *opt_o = NULL;
-        bool_t opt_d = FALSE;
-        bool_t opt_h = FALSE;
-        bool_t opt_v = FALSE;
+        bool opt_d = false;
+        bool opt_h = false;
+        bool opt_v = false;
         int i;
         for (i = 1; i < argc; i++) {
             if (argv[i][0] != '-') {
@@ -3903,13 +3893,13 @@ int main(int argc, char **argv) {
                 opt_o = o;
             }
             else if (strcmp(argv[i] + 1, "d") == 0) {
-                opt_d = TRUE;
+                opt_d = true;
             }
             else if (strcmp(argv[i] + 1, "h") == 0) {
-                opt_h = TRUE;
+                opt_h = true;
             }
             else if (strcmp(argv[i] + 1, "v") == 0) {
-                opt_v = TRUE;
+                opt_v = true;
             }
             else {
                 print_error("Invalid option '%s'\n", argv[i]);
