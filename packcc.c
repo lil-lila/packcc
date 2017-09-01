@@ -44,6 +44,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #ifndef _MSC_VER
 #if defined __GNUC__ && defined _WIN32 /* MinGW */
@@ -243,10 +244,12 @@ typedef enum code_reach_tag {
 static const char *g_cmdname = "packcc"; /* replaced later with actual one */
 
 static int print_error(const char *format, ...) {
-    int n;
+    int n,n_a,n_b;
     va_list a;
     va_start(a, format);
-    n = fprintf(stderr, "%s: ", g_cmdname) + vfprintf(stderr, format, a);
+    n_a = fprintf(stderr, "%s: ", g_cmdname);
+    n_b = vfprintf(stderr, format, a);
+    n = n_a + n_b;
     va_end(a);
     return n;
 }
@@ -270,7 +273,7 @@ static FILE *fopen_wt_e(const char *path) {
 }
 
 static void *malloc_e(size_t size) {
-    void *p = malloc(size);
+    /*@out@*/ void *p = malloc(size);
     if (p == NULL) {
         print_error("Out of memory\n");
         exit(3);
@@ -278,8 +281,8 @@ static void *malloc_e(size_t size) {
     return p;
 }
 
-static void *realloc_e(void *ptr, size_t size) {
-    void *p = realloc(ptr, size);
+static void *realloc_e(/*@in@*/ void *ptr, size_t size) {
+    /*@out@*/ void *p = realloc(ptr, size);
     if (p == NULL) {
         print_error("Out of memory\n");
         exit(3);
@@ -305,7 +308,7 @@ static char *strndup_e(const char *str, size_t len) {
 
 static bool is_filled_string(const char *str) {
     size_t i;
-    for (i = 0; str[i]; i++) {
+    for (i = 0; str[i]!='\0'; i++) {
         if (
             str[i] != ' '  &&
             str[i] != '\v' &&
@@ -325,7 +328,7 @@ static bool is_identifier_string(const char *str) {
         (str[0] >= 'A' && str[0] <= 'Z') ||
          str[0] == '_'
     )) return false;
-    for (i = 1; str[i]; i++) {
+    for (i = 1; str[i]!='\0'; i++) {
         if (!(
             (str[i] >= 'a' && str[i] <= 'z') ||
             (str[i] >= 'A' && str[i] <= 'Z') ||
@@ -344,7 +347,7 @@ static bool is_pointer_type(const char *str) {
 static bool unescape_string(char *str) {
     bool b = true;
     size_t i, j;
-    for (j = 0, i = 0; str[i]; i++) {
+    for (j = 0, i = 0; str[i]!='\0'; i++) {
         if (str[i] == '\\') {
             i++;
             switch (str[i]) {
@@ -416,7 +419,7 @@ static const char *escape_character(char ch, char (*buf)[5]) {
             snprintf(*buf, 5, "\\x%02x", (unsigned)ch);
     }
     (*buf)[4] = '\0';
-    return *buf;
+    return buf;
 }
 
 static void remove_heading_blank(char *str) {
@@ -1919,6 +1922,7 @@ static bool parse(context_t *ctx) {
             "#include <stdio.h>\n"
             "#include <stdlib.h>\n"
             "#include <string.h>\n"
+            "#include <stdbool.h>\n"
             "\n"
             "#ifndef _MSC_VER\n"
             "#if defined __GNUC__ && defined _WIN32 /* MinGW */\n"
@@ -2457,7 +2461,7 @@ static code_reach_t generate_expanding_code(generate_t *gen, int index, int onfa
     return CODE_REACH__BOTH;
 }
 
-code_reach_t generate_thunking_action_code(
+static code_reach_t generate_thunking_action_code(
     generate_t *gen, int index, const node_const_array_t *vars, const node_const_array_t *capts, bool error, int onfail, int indent, bool bare
 ) {
     assert(gen->rule->type == NODE_RULE);
@@ -2512,7 +2516,7 @@ code_reach_t generate_thunking_action_code(
     return CODE_REACH__ALWAYS_SUCCEED;
 }
 
-code_reach_t generate_thunking_error_code(
+static code_reach_t generate_thunking_error_code(
     generate_t *gen, const node_t *expr, int index, const node_const_array_t *vars, const node_const_array_t *capts, int onfail, int indent, bool bare
 ) {
     code_reach_t r;
