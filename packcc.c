@@ -308,7 +308,7 @@ static char *strndup_e(const char *str, size_t len) {
 
 static bool is_filled_string(const char *str) {
     size_t i;
-    for (i = 0; str[i]!='\0'; i++) {
+    for (i = 0; str[i]; i++) {
         if (
             str[i] != ' '  &&
             str[i] != '\v' &&
@@ -328,7 +328,7 @@ static bool is_identifier_string(const char *str) {
         (str[0] >= 'A' && str[0] <= 'Z') ||
          str[0] == '_'
     )) return false;
-    for (i = 1; str[i]!='\0'; i++) {
+    for (i = 1; str[i]; i++) {
         if (!(
             (str[i] >= 'a' && str[i] <= 'z') ||
             (str[i] >= 'A' && str[i] <= 'Z') ||
@@ -347,7 +347,7 @@ static bool is_pointer_type(const char *str) {
 static bool unescape_string(char *str) {
     bool b = true;
     size_t i, j;
-    for (j = 0, i = 0; str[i]!='\0'; i++) {
+    for (j = 0, i = 0; str[i]; i++) {
         if (str[i] == '\\') {
             i++;
             switch (str[i]) {
