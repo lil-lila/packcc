@@ -1928,7 +1928,7 @@ static bool parse(context_t *ctx) {
             "#if defined __GNUC__ && defined _WIN32 /* MinGW */\n"
             "static size_t strnlen(const char *str, size_t maxlen) {\n"
             "    size_t i;\n"
-            "    for (i = 0; str[i] && i < maxlen; i++);\n"
+            "    for (i = 0; i < maxlen && str[i]; i++);\n"
             "    return i;\n"
             "}\n"
             "#else\n"
@@ -3379,11 +3379,11 @@ static bool generate(context_t *ctx) {
             get_prefix(ctx)
         );
         fputs(
-            "    int n, c;\n"
+            "    int n;\n"
             "    n = ctx->buffer.len - ctx->pos;\n"
             "    if (n >= num) return n;\n"
             "    while (ctx->buffer.len < ctx->pos + num) {\n"
-            "        c = PCC_GETCHAR(ctx->auxil);\n"
+            "        int c = PCC_GETCHAR(ctx->auxil);\n"
             "        if (c == EOF) break;\n"
             "        pcc_char_array__add(ctx->auxil, &ctx->buffer, (char)c);\n"
             "    }\n"
