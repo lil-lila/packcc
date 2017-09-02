@@ -3075,7 +3075,7 @@ static bool generate(context_t *ctx) {
             "    return -1;\n"
             "}\n"
             "\n"
-            "static pcc_bool pcc_rule_set__add(pcc_auxil_t auxil, pcc_rule_set_t *set, pcc_rule_t rule) {\n"
+            "static bool pcc_rule_set__add(pcc_auxil_t auxil, pcc_rule_set_t *set, pcc_rule_t rule) {\n"
             "    int i = pcc_rule_set__index(auxil, set, rule);\n"
             "    if (i >= 0) return false;\n"
             "    if (set->max <= 0) set->max = 1;\n"
@@ -3085,7 +3085,7 @@ static bool generate(context_t *ctx) {
             "    return true;\n"
             "}\n"
             "\n"
-            "static pcc_bool pcc_rule_set__remove(pcc_auxil_t auxil, pcc_rule_set_t *set, pcc_rule_t rule) {\n"
+            "static bool pcc_rule_set__remove(pcc_auxil_t auxil, pcc_rule_set_t *set, pcc_rule_t rule) {\n"
             "    int i = pcc_rule_set__index(auxil, set, rule);\n"
             "    if (i < 0) return false;\n"
             "    memmove(set->buf + i, set->buf + (i + 1), (set->len - (i + 1)) * sizeof(pcc_rule_t));\n"
@@ -3422,14 +3422,14 @@ static bool generate(context_t *ctx) {
         );
         fprintf(
             stream,
-            "static pcc_bool pcc_apply_rule(%s_context_t *ctx, pcc_rule_t rule, pcc_thunk_array_t *thunks, pcc_value_t *value) {\n",
+            "static bool pcc_apply_rule(%s_context_t *ctx, pcc_rule_t rule, pcc_thunk_array_t *thunks, pcc_value_t *value) {\n",
             get_prefix(ctx)
         );
         fputs(
             "    static pcc_value_t null;\n"
             "    pcc_thunk_chunk_t *c = NULL;\n"
             "    int p = ctx->pos;\n"
-            "    pcc_bool b = true;\n"
+            "    bool b = true;\n"
             "    pcc_lr_answer_t *a = pcc_lr_table__get_answer(ctx->auxil, &ctx->lrtable, p, rule);\n"
             "    pcc_lr_head_t *h = pcc_lr_table__get_head(ctx->auxil, &ctx->lrtable, p);\n"
             "    if (h != NULL) {\n"
