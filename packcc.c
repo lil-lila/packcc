@@ -2256,9 +2256,32 @@ static code_reach_t generate_quantifying_code(generate_t *gen, const node_t *exp
         }
         else {
             int l = ++gen->label;
+            int l1 = ++gen->label;
+            if (!bare) {
+                write_characters(gen->stream, ' ', indent);
+                fputs("{\n", gen->stream);
+                indent += 4;
+            }
+            write_characters(gen->stream, ' ', indent);
+            fputs("int p = ctx->pos;\n", gen->stream);
+            write_characters(gen->stream, ' ', indent);
+            fputs("int n = chunk->thunks.len;\n", gen->stream);
             if (generate_code(gen, expr, l, indent, bare) != CODE_REACH__ALWAYS_SUCCEED) {
+                write_characters(gen->stream, ' ', indent);
+                fprintf(gen->stream, "goto L%04d;\n", l1);
                 write_characters(gen->stream, ' ', indent - 4);
                 fprintf(gen->stream, "L%04d:;\n", l);
+                write_characters(gen->stream, ' ', indent);
+                fputs("ctx->pos = p;\n", gen->stream);
+                write_characters(gen->stream, ' ', indent);
+                fputs("pcc_thunk_array__revert(ctx->auxil, &chunk->thunks, n);\n", gen->stream);
+                write_characters(gen->stream, ' ', indent - 4);
+                fprintf(gen->stream, "L%04d:;\n", l1);
+            }
+            if (!bare) {
+                indent -= 4;
+                write_characters(gen->stream, ' ', indent);
+                fputs("}\n", gen->stream);
             }
             return CODE_REACH__ALWAYS_SUCCEED;
         }
