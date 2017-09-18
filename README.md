@@ -1,4 +1,4 @@
-# PackCC
+# PackCC (fork of [PackCC](https://sourceforge.net/projects/packcc/))
 ## Overview
 PackCC is a packrat parser generator for C. Its main features are as follows:
 
