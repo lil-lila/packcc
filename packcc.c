@@ -2200,20 +2200,24 @@ static code_reach_t generate_quantifying_code(generate_t *gen, const node_t *exp
         if (min > 0) {
             write_characters(gen->stream, ' ', indent);
             fputs("int p1 = ctx->pos;\n", gen->stream);
-            write_characters(gen->stream, ' ', indent);
-            fputs("int n1 = chunk->thunks.len;\n", gen->stream);
+            if (expr->type==NODE_SEQUENCE || expr->type==NODE_ALTERNATE) {
+                write_characters(gen->stream, ' ', indent);
+                fputs("int n1 = chunk->thunks.len;\n", gen->stream);
+            }
         }
         write_characters(gen->stream, ' ', indent);
-        fputs("int p, n, i;\n", gen->stream);
+        fputs(expr->type==NODE_SEQUENCE || expr->type==NODE_ALTERNATE?"int p, n, i;\n":"int i;\n", gen->stream);
         write_characters(gen->stream, ' ', indent);
         if (max < 0)
             fputs("for (i = 0;; i++) {\n", gen->stream);
         else
             fprintf(gen->stream, "for (i = 0; i < %d; i++) {\n", max);
-        write_characters(gen->stream, ' ', indent + 4);
-        fputs("p = ctx->pos;\n", gen->stream);
-        write_characters(gen->stream, ' ', indent + 4);
-        fputs("n = chunk->thunks.len;\n", gen->stream);
+        if (expr->type==NODE_SEQUENCE || expr->type==NODE_ALTERNATE) {
+            write_characters(gen->stream, ' ', indent + 4);
+            fputs("p = ctx->pos;\n", gen->stream);
+            write_characters(gen->stream, ' ', indent + 4);
+            fputs("n = chunk->thunks.len;\n", gen->stream);
+        }
         {
             int l = ++gen->label;
             r = generate_code(gen, expr, l, indent + 4, true);
@@ -2222,10 +2226,12 @@ static code_reach_t generate_quantifying_code(generate_t *gen, const node_t *exp
             if (r != CODE_REACH__ALWAYS_SUCCEED) {
                 write_characters(gen->stream, ' ', indent - 4);
                 fprintf(gen->stream, "L%04d:;\n", l);
-                write_characters(gen->stream, ' ', indent);
-                fputs("ctx->pos = p;\n", gen->stream);
-                write_characters(gen->stream, ' ', indent);
-                fputs("pcc_thunk_array__revert(ctx->auxil, &chunk->thunks, n);\n", gen->stream);
+                if (expr->type==NODE_SEQUENCE || expr->type==NODE_ALTERNATE) {
+                    write_characters(gen->stream, ' ', indent);
+                    fputs("ctx->pos = p;\n", gen->stream);
+                    write_characters(gen->stream, ' ', indent);
+                    fputs("pcc_thunk_array__revert(ctx->auxil, &chunk->thunks, n);\n", gen->stream);
+                }
             }
             else if (max < 0) {
                 print_error("Warning: Infinite loop detected in generated code\n");
@@ -2236,8 +2242,10 @@ static code_reach_t generate_quantifying_code(generate_t *gen, const node_t *exp
             fprintf(gen->stream, "if (i < %d) {\n", min);
             write_characters(gen->stream, ' ', indent + 4);
             fputs("ctx->pos = p1;\n", gen->stream);
-            write_characters(gen->stream, ' ', indent + 4);
-            fputs("pcc_thunk_array__revert(ctx->auxil, &chunk->thunks, n1);\n", gen->stream);
+            if (expr->type==NODE_SEQUENCE || expr->type==NODE_ALTERNATE) {
+                write_characters(gen->stream, ' ', indent + 4);
+                fputs("pcc_thunk_array__revert(ctx->auxil, &chunk->thunks, n1);\n", gen->stream);
+            }
             write_characters(gen->stream, ' ', indent + 4);
             fprintf(gen->stream, "goto L%04d;\n", onfail);
             write_characters(gen->stream, ' ', indent);
@@ -2255,33 +2263,41 @@ static code_reach_t generate_quantifying_code(generate_t *gen, const node_t *exp
             return generate_code(gen, expr, onfail, indent, bare);
         }
         else {
-            int l = ++gen->label;
-            int l1 = ++gen->label;
-            if (!bare) {
+            int l = ++gen->label,l1;
+            if (expr->type==NODE_SEQUENCE || expr->type==NODE_ALTERNATE) {
+                l1 = ++gen->label;
+                if (!bare) {
+                    write_characters(gen->stream, ' ', indent);
+                    fputs("{\n", gen->stream);
+                    indent += 4;
+                }
                 write_characters(gen->stream, ' ', indent);
-                fputs("{\n", gen->stream);
-                indent += 4;
+                fputs("int p = ctx->pos;\n", gen->stream);
+                write_characters(gen->stream, ' ', indent);
+                fputs("int n = chunk->thunks.len;\n", gen->stream);
             }
-            write_characters(gen->stream, ' ', indent);
-            fputs("int p = ctx->pos;\n", gen->stream);
-            write_characters(gen->stream, ' ', indent);
-            fputs("int n = chunk->thunks.len;\n", gen->stream);
             if (generate_code(gen, expr, l, indent, bare) != CODE_REACH__ALWAYS_SUCCEED) {
-                write_characters(gen->stream, ' ', indent);
-                fprintf(gen->stream, "goto L%04d;\n", l1);
+                if (expr->type==NODE_SEQUENCE || expr->type==NODE_ALTERNATE) {
+                    write_characters(gen->stream, ' ', indent);
+                    fprintf(gen->stream, "goto L%04d;\n", l1);
+                }
                 write_characters(gen->stream, ' ', indent - 4);
                 fprintf(gen->stream, "L%04d:;\n", l);
-                write_characters(gen->stream, ' ', indent);
-                fputs("ctx->pos = p;\n", gen->stream);
-                write_characters(gen->stream, ' ', indent);
-                fputs("pcc_thunk_array__revert(ctx->auxil, &chunk->thunks, n);\n", gen->stream);
-                write_characters(gen->stream, ' ', indent - 4);
-                fprintf(gen->stream, "L%04d:;\n", l1);
+                if (expr->type==NODE_SEQUENCE || expr->type==NODE_ALTERNATE) {
+                    write_characters(gen->stream, ' ', indent);
+                    fputs("ctx->pos = p;\n", gen->stream);
+                    write_characters(gen->stream, ' ', indent);
+                    fputs("pcc_thunk_array__revert(ctx->auxil, &chunk->thunks, n);\n", gen->stream);
+                    write_characters(gen->stream, ' ', indent - 4);
+                    fprintf(gen->stream, "L%04d:;\n", l1);
+                }
             }
-            if (!bare) {
-                indent -= 4;
-                write_characters(gen->stream, ' ', indent);
-                fputs("}\n", gen->stream);
+            if (expr->type==NODE_SEQUENCE || expr->type==NODE_ALTERNATE) {
+                if (!bare) {
+                    indent -= 4;
+                    write_characters(gen->stream, ' ', indent);
+                    fputs("}\n", gen->stream);
+                }
             }
             return CODE_REACH__ALWAYS_SUCCEED;
         }
