@@ -58,7 +58,7 @@ static size_t strnlen(const char *str, size_t maxlen) {
 #endif
 #endif
 
-#define VERSION "1.2.0"
+#define VERSION "1.2.4"
 
 #ifndef BUFFER_INIT_SIZE
 #define BUFFER_INIT_SIZE 256
