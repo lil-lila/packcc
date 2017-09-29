@@ -2047,18 +2047,18 @@ static code_reach_t generate_matching_string_code(generate_t *gen, const char *v
                 fputs("{\n", gen->stream);
                 indent += 4;
             }
-            write_characters(gen->stream, ' ', indent);
-            fputs("const char *s = ctx->buffer.buf + ctx->pos;\n", gen->stream);
+            //write_characters(gen->stream, ' ', indent);
+            //fputs("const char *s = ctx->buffer.buf + ctx->pos;\n", gen->stream);
             write_characters(gen->stream, ' ', indent);
             fputs("if (\n", gen->stream);
             write_characters(gen->stream, ' ', indent + 4);
             fprintf(gen->stream, "pcc_refill_buffer(ctx, %zu) < %zu ||\n", n, n);
             for (i = 0; i < n - 1; i++) {
                 write_characters(gen->stream, ' ', indent + 4);
-                fprintf(gen->stream, "s[%zu] != '%s' ||\n", i, escape_character(value[i], &s));
+                fprintf(gen->stream, "((const char *)(ctx->buffer.buf + ctx->pos))[%zu] != '%s' ||\n", i, escape_character(value[i], &s));
             }
             write_characters(gen->stream, ' ', indent + 4);
-            fprintf(gen->stream, "s[%zu] != '%s'\n", i, escape_character(value[i], &s));
+            fprintf(gen->stream, "((const char *)(ctx->buffer.buf + ctx->pos))[%zu] != '%s'\n", i, escape_character(value[i], &s));
             write_characters(gen->stream, ' ', indent);
             fprintf(gen->stream, ") goto L%04d;\n", onfail);
             write_characters(gen->stream, ' ', indent);
@@ -2316,13 +2316,13 @@ static code_reach_t generate_predicating_code(generate_t *gen, const node_t *exp
         indent += 4;
     }
     write_characters(gen->stream, ' ', indent);
-    fputs("int p = ctx->pos;\n", gen->stream);
+    fputs("int pp = ctx->pos;\n", gen->stream);
     if (neg) {
         int l = ++gen->label;
         r = generate_code(gen, expr, l, indent, false);
         if (r != CODE_REACH__ALWAYS_FAIL) {
             write_characters(gen->stream, ' ', indent);
-            fputs("ctx->pos = p;\n", gen->stream);
+            fputs("ctx->pos = pp;\n", gen->stream);
             write_characters(gen->stream, ' ', indent);
             fprintf(gen->stream, "goto L%04d;\n", onfail);
         }
@@ -2330,7 +2330,7 @@ static code_reach_t generate_predicating_code(generate_t *gen, const node_t *exp
             write_characters(gen->stream, ' ', indent - 4);
             fprintf(gen->stream, "L%04d:;\n", l);
             write_characters(gen->stream, ' ', indent);
-            fputs("ctx->pos = p;\n", gen->stream);
+            fputs("ctx->pos = pp;\n", gen->stream);
         }
         switch (r) {
         case CODE_REACH__ALWAYS_SUCCEED: r = CODE_REACH__ALWAYS_FAIL; break;
@@ -2344,7 +2344,7 @@ static code_reach_t generate_predicating_code(generate_t *gen, const node_t *exp
         r = generate_code(gen, expr, l, indent, false);
         if (r != CODE_REACH__ALWAYS_FAIL) {
             write_characters(gen->stream, ' ', indent);
-            fputs("ctx->pos = p;\n", gen->stream);
+            fputs("ctx->pos = pp;\n", gen->stream);
         }
         if (r == CODE_REACH__BOTH) {
             write_characters(gen->stream, ' ', indent);
@@ -2354,7 +2354,7 @@ static code_reach_t generate_predicating_code(generate_t *gen, const node_t *exp
             write_characters(gen->stream, ' ', indent - 4);
             fprintf(gen->stream, "L%04d:;\n", l);
             write_characters(gen->stream, ' ', indent);
-            fputs("ctx->pos = p;\n", gen->stream);
+            fputs("ctx->pos = pp;\n", gen->stream);
             write_characters(gen->stream, ' ', indent);
             fprintf(gen->stream, "goto L%04d;\n", onfail);
         }
@@ -2460,14 +2460,14 @@ static code_reach_t generate_capturing_code(generate_t *gen, const node_t *expr,
         indent += 4;
     }
     write_characters(gen->stream, ' ', indent);
-    fputs("int p = ctx->pos, q;\n", gen->stream);
+    fputs("int cp = ctx->pos, cq;\n", gen->stream);
     r = generate_code(gen, expr, onfail, indent, false);
     write_characters(gen->stream, ' ', indent);
-    fputs("q = ctx->pos;\n", gen->stream);
+    fputs("cq = ctx->pos;\n", gen->stream);
     write_characters(gen->stream, ' ', indent);
-    fprintf(gen->stream, "chunk->capts.buf[%d].range.start = p;\n", index);
+    fprintf(gen->stream, "chunk->capts.buf[%d].range.start = cp;\n", index);
     write_characters(gen->stream, ' ', indent);
-    fprintf(gen->stream, "chunk->capts.buf[%d].range.end = q;\n", index);
+    fprintf(gen->stream, "chunk->capts.buf[%d].range.end = cq;\n", index);
     if (!bare) {
         indent -= 4;
         write_characters(gen->stream, ' ', indent);
