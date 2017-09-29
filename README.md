@@ -1,4 +1,5 @@
-# PackCC (fork of [PackCC](https://sourceforge.net/projects/packcc/))
+# PackCC (fork of [PackCC](https://sourceforge.net/projects/packcc/)) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/c89ca0e5c46c4fc8b5bc599beacbfa95)](https://www.codacy.com/app/nechaev.e.01/packcc?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=enechaev/packcc&amp;utm_campaign=Badge_Grade)
+Implementation of Packrat Parser Generator algorithm
 ## Overview
 PackCC is a packrat parser generator for C. Its main features are as follows:
 
