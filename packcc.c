@@ -3746,12 +3746,12 @@ static bool generate(context_t *ctx) {
                     "    chunk->pos = ctx->pos;\n",
                     stream
                 );
-                fprintf(
+                if (ctx->rules.buf[i]->data.rule.vars.len) fprintf(
                     stream,
                     "    pcc_value_table__resize(ctx->auxil, &chunk->values, %d);\n",
                     ctx->rules.buf[i]->data.rule.vars.len
                 );
-                fprintf(
+                if (ctx->rules.buf[i]->data.rule.capts.len) fprintf(
                     stream,
                     "    pcc_capture_table__resize(ctx->auxil, &chunk->capts, %d);\n",
                     ctx->rules.buf[i]->data.rule.capts.len
