@@ -416,7 +416,7 @@ static const char *escape_character(char ch, char (*buf)[5]) {
         if (ch >= '\x20' && ch < '\x7f')
             snprintf(*buf, 5, "%c", ch);
         else
-            snprintf(*buf, 5, "\\x%02x", (unsigned)ch);
+            snprintf(*buf, 5, "\\x%02x", (unsigned char)ch);
     }
     (*buf)[4] = '\0';
     return *buf;
