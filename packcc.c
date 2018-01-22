@@ -386,6 +386,54 @@ static bool unescape_string(char *str) {
                     i += 2;
                 }
                 break;
+            case 'u':
+                if (str[i + 1] == '\0') {
+                    str[j++] = '\\'; str[j++] = 'u'; str[j] = '\0'; return false;
+                }
+                if (str[i + 2] == '\0') {
+                    str[j++] = '\\'; str[j++] = 'u'; str[j++] = str[i + 1]; str[j] = '\0'; return false;
+                }
+                if (str[i + 3] == '\0') {
+                    str[j++] = '\\'; str[j++] = 'u'; str[j++] = str[i + 1]; str[j++] = str[i + 2]; str[j] = '\0'; return false;
+                }
+                if (str[i + 4] == '\0') {
+                    str[j++] = '\\'; str[j++] = 'u'; str[j++] = str[i + 1]; str[j++] = str[i + 2]; str[j++] = str[i + 3]; str[j] = '\0'; return false;
+                }
+                {
+                    char s[4];
+                    for (int k=0;k<4;k++) {
+                        char c = str[i + k + 1];
+                        s[k] = (c >= '0' && c <= '9') ? c - '0' :
+                               (c >= 'a' && c <= 'f') ? c - 'a' + 10 :
+                               (c >= 'A' && c <= 'F') ? c - 'A' + 10 : -1;
+                    }
+                    if (s[0] < 0 || s[1] < 0 || s[2] < 0 || s[3] < 0) {
+                        str[j++] = '\\'; str[j++] = 'u'; str[j++] = str[i + 1]; str[j++] = str[i + 2]; str[j++] = str[i + 3]; str[j++] = str[i + 4];
+                        b = false;
+                    }
+                    else {
+                        int ch=s[0];
+                        for (int k=1;k<4;k++) ch = (ch << 4) | s[k];
+                        printf("0x%x\n",ch);
+                        if (ch < 0x80) {
+                            str[j++] = (char)ch;
+                        } else if (ch < 0x800) {
+                            str[j++] = (ch >> 6) | 0xC0;
+                            str[j++] = (ch & 0x3F) | 0x80;
+                        } else if (ch < 0x10000) {
+                            str[j++] = (ch >> 12) | 0xE0;
+                            str[j++] = ((ch >> 6) & 0x3F) | 0x80;
+                            str[j++] = (ch & 0x3F) | 0x80;
+                        } else if (ch < 0x110000) {
+                            str[j++] = (ch >> 18) | 0xF0;
+                            str[j++] = ((ch >> 12) & 0x3F) | 0x80;
+                            str[j++] = ((ch >> 6) & 0x3F) | 0x80;
+                            str[j++] = (ch & 0x3F) | 0x80;
+                        }
+                    }
+                    i += 4;
+                }
+                break;
             case '\n': break;
             case '\r': if (str[i + 1] == '\n') i++; break;
             default: str[j++] = str[i];
