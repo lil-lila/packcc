@@ -130,10 +130,12 @@ typedef struct node_reference_tag {
 
 typedef struct node_string_tag {
     char *value;
+    size_t len;
 } node_string_t;
 
 typedef struct node_charclass_tag {
     char *value; /* NULL means any character */
+    size_t len;
 } node_charclass_t;
 
 typedef struct node_quantity_tag {
@@ -344,9 +346,13 @@ static bool is_pointer_type(const char *str) {
     return (n > 0 && str[n - 1] == '*');
 }
 
-static bool unescape_string(char *str) {
+static bool unescape_string(char *str, size_t *length) {
+    if (!str) {
+        if (length) *length = 0;
+        return true;
+    }
     bool b = true;
-    size_t i, j;
+    size_t i, j = 0;
     for (j = 0, i = 0; str[i]; i++) {
         if (str[i] == '\\') {
             i++;
@@ -414,7 +420,6 @@ static bool unescape_string(char *str) {
                     else {
                         int ch=s[0];
                         for (int k=1;k<4;k++) ch = (ch << 4) | s[k];
-                        printf("0x%x\n",ch);
                         if (ch < 0x80) {
                             str[j++] = (char)ch;
                         } else if (ch < 0x800) {
@@ -444,6 +449,7 @@ static bool unescape_string(char *str) {
         }
     }
     str[j] = '\0';
+    if (length) *length = j;
     return b;
 }
 
@@ -804,9 +810,11 @@ static node_t *create_node(node_type_t type) {
         break;
     case NODE_STRING:
         node->data.string.value = NULL;
+        node->data.string.len = 0;
         break;
     case NODE_CHARCLASS:
         node->data.charclass.value = NULL;
+        node->data.charclass.len = 0;
         break;
     case NODE_QUANTITY:
         node->data.quantity.min = node->data.quantity.max = 0;
@@ -1637,13 +1645,14 @@ static node_t *parse_primary(context_t *ctx, node_t *rule) {
         match_spaces(ctx);
         n_p = create_node(NODE_CHARCLASS);
         n_p->data.charclass.value = NULL;
+        n_p->data.charclass.len = 0;
     }
     else if (match_character_class(ctx)) {
         int q = ctx->bufpos;
         match_spaces(ctx);
         n_p = create_node(NODE_CHARCLASS);
         n_p->data.charclass.value = strndup_e(ctx->buffer.buf + p + 1, q - p - 2);
-        if (!unescape_string(n_p->data.charclass.value)) {
+        if (!unescape_string(n_p->data.charclass.value, &n_p->data.charclass.len)) {
             print_error("%s:%d:%d: Illegal escape sequence\n", ctx->iname, l + 1, m + 1);
             ctx->errnum++;
         }
@@ -1653,7 +1662,7 @@ static node_t *parse_primary(context_t *ctx, node_t *rule) {
         match_spaces(ctx);
         n_p = create_node(NODE_STRING);
         n_p->data.string.value = strndup_e(ctx->buffer.buf + p + 1, q - p - 2);
-        if (!unescape_string(n_p->data.string.value)) {
+        if (!unescape_string(n_p->data.string.value, &n_p->data.string.len)) {
             print_error("%s:%d:%d: Illegal escape sequence\n", ctx->iname, l + 1, m + 1);
             ctx->errnum++;
         }
@@ -1911,7 +1920,7 @@ static bool parse_directive_string_(context_t *ctx, const char *name, char **out
             q = ctx->bufpos;
             match_spaces(ctx);
             s = strndup_e(ctx->buffer.buf + p + 1, q - p - 2);
-            if (!unescape_string(s)) {
+            if (!unescape_string(s, NULL)) {
                 print_error("%s:%d:%d: Illegal escape sequence\n", ctx->iname, lv + 1, mv + 1);
                 ctx->errnum++;
             }
@@ -2084,8 +2093,7 @@ static bool parse(context_t *ctx) {
     return (ctx->errnum == 0);
 }
 
-static code_reach_t generate_matching_string_code(generate_t *gen, const char *value, int onfail, int indent, bool bare) {
-    size_t n = (value != NULL) ? strlen(value) : 0;
+static code_reach_t generate_matching_string_code(generate_t *gen, const char *value, size_t n, int onfail, int indent, bool bare) {
     if (n > 0) {
         char s[5];
         if (n > 1) {
@@ -2138,9 +2146,9 @@ static code_reach_t generate_matching_string_code(generate_t *gen, const char *v
     }
 }
 
-static code_reach_t generate_matching_charclass_code(generate_t *gen, const char *value, int onfail, int indent, bool bare) {
+static code_reach_t generate_matching_charclass_code(generate_t *gen, const char *value, size_t n, int onfail, int indent, bool bare) {
     if (value != NULL) {
-        size_t n = strlen(value);
+        //size_t n = strlen(value);
         if (n > 0) {
             char s[5], t[5];
             if (n > 1) {
@@ -2666,9 +2674,9 @@ static code_reach_t generate_code(generate_t *gen, const node_t *node, int onfai
         }
         return CODE_REACH__BOTH;
     case NODE_STRING:
-        return generate_matching_string_code(gen, node->data.string.value, onfail, indent, bare);
+        return generate_matching_string_code(gen, node->data.string.value, node->data.string.len, onfail, indent, bare);
     case NODE_CHARCLASS:
-        return generate_matching_charclass_code(gen, node->data.charclass.value, onfail, indent, bare);
+        return generate_matching_charclass_code(gen, node->data.charclass.value, node->data.charclass.len, onfail, indent, bare);
     case NODE_QUANTITY:
         return generate_quantifying_code(gen, node->data.quantity.expr, node->data.quantity.min, node->data.quantity.max, onfail, indent, bare);
     case NODE_PREDICATE:
