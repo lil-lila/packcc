@@ -84,8 +84,7 @@ A character or string enclosed in single quotes is matched literally. The ANSI C
 
 `'foo bar'`
 
-`"string"`
-
+- `"string"`
 A character or string enclosed in double quotes is matched literally. The ANSI C escape sequences are recognized within the characters. The example is shown below.
 
 `"foo bar"`
