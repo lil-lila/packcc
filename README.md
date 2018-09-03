@@ -141,7 +141,7 @@ A dollar ($) followed by a positive integer represents a text previously capture
 
 This matches 0foo0, 123foo123, etc.
 
-`'[' < '='* > '[' !( ']' $1 ']' ) . )* ( ']' $1 ']' )`
+`'[' < '='* > '[' ( !( ']' $1 ']' ) . )* ( ']' $1 ']' )`
 
 This matches `[[...]]`, `[=[...]=]`, `[==[...]==]`, etc.
 
