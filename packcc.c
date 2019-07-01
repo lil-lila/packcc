@@ -473,7 +473,7 @@ static const char *escape_character(char ch, char (*buf)[5]) {
             snprintf(*buf, 5, "\\x%02x", (unsigned char)ch);
     }
     (*buf)[4] = '\0';
-    return *buf;
+    return (char *)buf;
 }
 
 static void remove_heading_blank(char *str) {
