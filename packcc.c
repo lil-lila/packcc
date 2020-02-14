@@ -1337,7 +1337,7 @@ static bool match_character(context_t *ctx, char ch) {
 static bool match_character_range(context_t *ctx, char min, char max) {
     if (refill_buffer(ctx, 1) >= 1) {
         char c = ctx->buffer.buf[ctx->bufpos];
-        if (c >= min && c <= max) { 
+        if (c >= min && c <= max) {
             ctx->bufpos++;
             return true;
         }
@@ -2916,6 +2916,7 @@ static bool generate(context_t *ctx) {
             "    pcc_char_array_t buffer;\n"
             "    pcc_lr_table_t lrtable;\n"
             "    pcc_lr_stack_t lrstack;\n"
+            "    bool got_error;\n"
             "    pcc_auxil_t auxil;\n"
             "};\n"
             "\n",
@@ -3459,6 +3460,7 @@ static bool generate(context_t *ctx) {
             "    pcc_char_array__init(auxil, &ctx->buffer, PCC_BUFFERSIZE);\n"
             "    pcc_lr_table__init(auxil, &ctx->lrtable, PCC_BUFFERSIZE);\n"
             "    pcc_lr_stack__init(auxil, &ctx->lrstack, PCC_ARRAYSIZE);\n"
+            "    ctx->got_error = false;\n"
             "    ctx->auxil = auxil;\n"
             "    return ctx;\n"
             "}\n"
@@ -3852,6 +3854,8 @@ static bool generate(context_t *ctx) {
         );
         fputs(
             "    pcc_thunk_array_t thunks;\n"
+			"    if (ctx->got_error)\n"
+			"        return 0;\n"
             "    pcc_thunk_array__init(ctx->auxil, &thunks, PCC_ARRAYSIZE);\n",
             stream
         );
@@ -3863,8 +3867,12 @@ static bool generate(context_t *ctx) {
             );
             fputs(
                 "        pcc_do_action(ctx, &thunks, ret);\n"
-                "    else\n"
+                "    else {\n"
+                "        ctx->got_error = true;\n"
                 "        PCC_ERROR(ctx->auxil);\n"
+                "    }\n"
+                "    if (ctx->got_error)\n"
+				"        return 0;\n"
                 "    pcc_commit_buffer(ctx);\n",
                 stream
             );
