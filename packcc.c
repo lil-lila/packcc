@@ -1982,7 +1982,7 @@ static bool parse(context_t *ctx) {
             "#include <stdbool.h>\n"
             "\n"
             "#ifndef _MSC_VER\n"
-            "#if defined __GNUC__ && defined _WIN32 /* MinGW */\n"
+            "#if ((defined USE_SYSTEM_STRNLEN) == 0) && defined __GNUC__ && defined _WIN32 /* MinGW */\n"
             "static size_t strnlen(const char *str, size_t maxlen) {\n"
             "    size_t i;\n"
             "    for (i = 0; i < maxlen && str[i]; i++);\n"
