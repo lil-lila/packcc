@@ -2146,6 +2146,21 @@ static code_reach_t generate_matching_string_code(generate_t *gen, const char *v
     }
 }
 
+static int get_utf8_width(char c) {
+    return 1 + ((c & 0xC0) == 0xC0) + ((c & 0xE0) == 0xE0) + ((c & 0xF0) == 0xF0);
+}
+
+static int get_utf8_codepoint(int width, const unsigned char* c) {
+    assert(1 <= width && width <= 4);
+    switch (width) {
+        case 1: return c[0];
+        case 2: return (c[0] << 8) + c[1];
+        case 3: return (c[0] << 16) + (c[1] << 8) + c[2];
+        case 4: return (c[0] << 24) + (c[1] << 16) + (c[2] << 8) + c[3];
+    }
+    return -1;
+}
+
 static code_reach_t generate_matching_charclass_code(generate_t *gen, const char *value, size_t n, int onfail, int indent, bool bare) {
     if (value != NULL) {
         //size_t n = strlen(value);
@@ -2168,44 +2183,75 @@ static code_reach_t generate_matching_charclass_code(generate_t *gen, const char
                     return CODE_REACH__BOTH;
                 }
                 else {
+                    int w, w2;
                     if (!bare) {
                         write_characters(gen->stream, ' ', indent);
                         fputs("{\n", gen->stream);
                         indent += 4;
                     }
                     write_characters(gen->stream, ' ', indent);
-                    fputs("char c;\n", gen->stream);
+                    fputs("char* c;\n", gen->stream);
                     write_characters(gen->stream, ' ', indent);
+                    w = get_utf8_width(value[i]);
                     fprintf(gen->stream, "if (pcc_refill_buffer(ctx, 1) < 1) goto L%04d;\n", onfail);
                     write_characters(gen->stream, ' ', indent);
-                    fputs("c = ctx->buffer.buf[ctx->pos];\n", gen->stream);
-                    if (i + 3 == n && value[i + 1] == '-') {
+                    fputs("c = ctx->buffer.buf + ctx->pos;\n", gen->stream);
+                    write_characters(gen->stream, ' ', indent);
+                    fputs("int w = pcc_char_utf8_width(*c);\n", gen->stream);
+                    write_characters(gen->stream, ' ', indent);
+                    fprintf(gen->stream, "if (w > 1 && pcc_refill_buffer(ctx, w - 1) < (w - 1)) goto L%04d;\n", onfail);
+                    if (i + 3 <= n && value[i + w] == '-' && i + w + (w2 = get_utf8_width(value[i + w + 1])) + 1 == n) {
                         write_characters(gen->stream, ' ', indent);
-                        fprintf(gen->stream,
-                            a ? "if (c >= '%s' && c <= '%s') goto L%04d;\n"
-                              : "if (!(c >= '%s' && c <= '%s')) goto L%04d;\n",
-                            escape_character(value[i], &s), escape_character(value[i + 2], &t), onfail);
+                        fprintf(gen->stream, "if (%s", a ? "": "!(");
+                        if (w == 1 && w2 == 1) {
+                            fprintf(gen->stream, "*c >= '%s' && *c <= '%s'",
+                                    escape_character(value[i], &s),
+                                    escape_character(value[i + 2], &t));
+                        }
+                        else {
+                            fprintf(gen->stream, "PCC_UTF8_CODEPOINT(w, c) >= 0x%x && PCC_UTF8_CODEPOINT(w, c) <= 0x%x",
+                                    get_utf8_codepoint(w, value + i),
+                                    get_utf8_codepoint(w2, value + i + w + 1));
+                        }
+                        fprintf(gen->stream, "%s) goto L%04d;\n", a ? "": ")", onfail);
                     }
                     else {
                         write_characters(gen->stream, ' ', indent);
                         fputs(a ? "if (\n" : "if (!(\n", gen->stream);
-                        for (; i < n; i++) {
+                        while (i < n) {
                             write_characters(gen->stream, ' ', indent + 4);
-                            if (i + 2 < n && value[i + 1] == '-') {
-                                fprintf(gen->stream, "(c >= '%s' && c <= '%s')%s\n",
-                                    escape_character(value[i], &s), escape_character(value[i + 2], &t), (i + 3 == n) ? "" : " ||");
-                                i += 2;
+                            if (i + w + 1 < n && value[i + w] == '-') {
+                                w2 = get_utf8_width(value[i + w + 1]);
+                                if (w == 1 && w2 == 1) {
+                                    fprintf(gen->stream, "(*c >= '%s' && *c <= '%s')",
+                                            escape_character(value[i], &s),
+                                            escape_character(value[i + 2], &t));
+                                }
+                                else {
+                                    fprintf(gen->stream, "(PCC_UTF8_CODEPOINT(w, c) >= 0x%x && PCC_UTF8_CODEPOINT(w, c) <= 0x%x)",
+                                            get_utf8_codepoint(w, value + i),
+                                            get_utf8_codepoint(w2, value + i + w + 1));
+                                }
+                                fprintf(gen->stream, "%s\n", (i + w + 1 + w2 == n) ? "" : " ||");
+                                i += 1 + w + w2;
                             }
                             else {
-                                fprintf(gen->stream, "c == '%s'%s\n",
-                                    escape_character(value[i], &s), (i + 1 == n) ? "" : " ||");
+                                if (w == 1) {
+                                    fprintf(gen->stream, "(*c == '%s')", escape_character(value[i], &s));
+                                }
+                                else {
+                                    fprintf(gen->stream, "(PCC_UTF8_CODEPOINT(w, c) == 0x%x)", get_utf8_codepoint(w, value + i));
+                                }
+                                fprintf(gen->stream, "%s\n", (i + w == n) ? "" : " ||");
+                                i += w;
                             }
+                            w = get_utf8_width(value[i]);
                         }
                         write_characters(gen->stream, ' ', indent);
                         fprintf(gen->stream, a ? ") goto L%04d;\n" : ")) goto L%04d;\n", onfail);
                     }
                     write_characters(gen->stream, ' ', indent);
-                    fputs("ctx->pos++;\n", gen->stream);
+                    fputs("ctx->pos += w;\n", gen->stream);
                     if (!bare) {
                         indent -= 4;
                         write_characters(gen->stream, ' ', indent);
@@ -2963,6 +3009,13 @@ static bool generate(context_t *ctx) {
             "#define PCC_FREE(auxil, ptr) free(ptr)\n"
             "#endif /* PCC_FREE */\n"
             "\n"
+            "#define PCC_UTF8_CODEPOINT_(W, C) ( \\\n"
+            "       (W == 1) ? C[0] : \\\n"
+            "       (W == 2) ? ((C[0] << 8) + C[1]) : \\\n"
+            "       (W == 3) ? ((C[0] << 16) + (C[1] << 8) + C[2]) : \\\n"
+            "       ((C[0] << 24) + (C[1] << 16) + ((C[2] << 8) + C[3])))\n"
+            "#define PCC_UTF8_CODEPOINT(W, C) PCC_UTF8_CODEPOINT_(W, ((const unsigned char*)C))\n"
+            "\n"
             /* not used
             "static char *pcc_strdup_e(pcc_auxil_t auxil, const char *str) {\n"
             "    size_t m = strlen(str);\n"
@@ -2973,6 +3026,10 @@ static bool generate(context_t *ctx) {
             "}\n"
             "\n"
             */
+            "static int pcc_char_utf8_width(char c) {\n"
+            "    return 1 + ((c & 0xC0) == 0xC0) + ((c & 0xE0) == 0xE0) + ((c & 0xF0) == 0xF0);\n"
+            "}\n"
+            "\n"
             "static char *pcc_strndup_e(pcc_auxil_t auxil, const char *str, size_t len) {\n"
             "    size_t m = strnlen(str, len);\n"
             "    char *s = (char *)PCC_MALLOC(auxil, m + 1);\n"
